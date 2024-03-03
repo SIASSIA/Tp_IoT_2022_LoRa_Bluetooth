@@ -5,6 +5,7 @@ Ce projet vise à établir une communication bidirectionnelle entre deux apparei
 Dans ce scénario, mon dispositif agit en tant qu'émetteur. L'objectif principal est de configurer une liaison LoRa avec le récepteur. Pour ce faire, nous commençons par acquérir les paramètres de configuration du réseau LoRa via MQTT. Ces paramètres incluent la fréquence, le facteur d'étalement (SF, Spreading Factor) et la bande passante du signal (SB, Signal Bandwidth). 
 
 ##Fonctionnement####
+
 Le dispositif commence par se connecter au réseau Wi-Fi spécifié et s'abonne à un broker MQTT public pour recevoir les paramètres de configuration LoRa. Une fois ces paramètres reçus (fréquence, SF, et SB), le dispositif configure le réseau LoRa et commence à envoyer des données. Les données envoyées sont d1 et d2, où d2 représente la valeur RSSI, un indicateur de la puissance du signal reçu.
 
 
@@ -34,7 +35,7 @@ On définit ensuite les constantes suivantes dans le fichier de configuration:
 La fonction `parseCSV` est utilisée pour analyser les paramètres de configuration LoRa reçus via MQTT sous forme de chaîne CSV.
 Dans la fonction `setup`, le dispositif établit la connexion Wi-Fi, se connecte au broker MQTT, et configure la communication LoRa avec les paramètres reçus.
 La fonction `callback` est déclenchée lors de la réception d'un message MQTT, traitant les données reçues pour configurer le réseau LoRa.
-///
+
 
 Au niveau de l'émetteur, la boucle principale (loop) envoie périodiquement les données d1 et d2 via LoRa et affiche les informations pertinentes sur le moniteur série.
 Tandisqu'au nieau du récepteur,la boucle principale (loop) du dispositif traite périodiquement les données reçues et les affiche sur le moniteur série.
