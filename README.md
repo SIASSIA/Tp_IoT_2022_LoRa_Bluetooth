@@ -20,6 +20,7 @@ Une fois la connexion Lora établie on peut enfin recevoir les données venant d
 
 
 ##Configuration et Dépendances ( Emetteur et Récepteur)#####
+
 Le bon fonctionnement du code repose sur l'installation des bibliothèques suivantes dans l’environnement de développement Arduino IDE:
 WiFi.h pour la connexion au réseau Wi-Fi.
 PubSubClient.h pour la communication MQTT.
@@ -29,6 +30,7 @@ On définit ensuite les constantes suivantes dans le fichier de configuration:
 `mqtt_broker`, `topic`, `mqtt_username`, `mqtt_password`, et `mqtt_port` pour la configuration MQTT.
 
 ##Points Clés du Code (Emetteur et Récepteur)#####
+
 La fonction `parseCSV` est utilisée pour analyser les paramètres de configuration LoRa reçus via MQTT sous forme de chaîne CSV.
 Dans la fonction `setup`, le dispositif établit la connexion Wi-Fi, se connecte au broker MQTT, et configure la communication LoRa avec les paramètres reçus.
 La fonction `callback` est déclenchée lors de la réception d'un message MQTT, traitant les données reçues pour configurer le réseau LoRa.
