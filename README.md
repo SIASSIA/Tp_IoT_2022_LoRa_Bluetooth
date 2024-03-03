@@ -39,4 +39,4 @@ Tandisqu'au nieau du récepteur,la boucle principale (loop) du dispositif traite
 
 En résumé, ce projet illustre comment configurer et utiliser une communication LoRa dans un contexte IoT, en utilisant MQTT pour la transmission des paramètres de configuration. Cela démontre la flexibilité et l'efficacité de LoRa pour la communication à longue distance dans diverses applications IoT.
 
-T
+
