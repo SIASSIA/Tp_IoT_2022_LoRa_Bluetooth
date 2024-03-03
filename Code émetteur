@@ -1,0 +1,233 @@
+#include <WiFi.h>
+#include <PubSubClient.h>
+#include <ArduinoJson.h>
+#include <string.h>
+
+
+/// configuration packet Lora
+
+
+#include <SPI.h>  // include libraries
+#include <LoRa.h>
+#define SCK 5    // GPIO5 -- SX127x's SCK
+#define MISO 19  // GPIO19 -- SX127x's MISO
+#define MOSI 27  // GPIO27 -- SX127x's MOSI
+#define SS 18    // GPIO18 -- SX127x's CS
+#define RST 14   // GPIO14 -- SX127x's RESET
+#define DI0 26   // GPIO26 -- SX127x's IRQ(Interrupt Request)
+//#define freq 8685E5
+//#define sf 10
+//#define sb 125E3
+
+
+int freq;
+int sf;
+float sb;
+
+
+
+
+union pack {
+  uint8_t frame[16];  // trames avec octets
+  float data[4];      // 4 valeurs en virgule flottante
+} sdp;                // paquet d’émission
+
+
+
+
+// WiFi
+
+
+const char* ssid = "iPhone de Rabbi Evralie";
+const char* password = "12345678";
+
+
+
+
+// MQTT Broker
+const char* mqtt_broker = "test.mosquitto.org";
+const char* topic = "srt5/lea";
+const char* mqtt_username = "";
+const char* mqtt_password = "";
+const int mqtt_port = 1883;
+
+
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+
+
+
+
+
+void parseCSV(const char* csvString) {
+  char* token;
+  char* csvCopy = strdup(csvString);  // Duplication de la chaîne pour éviter de modifier l'original
+  const char* delimiter = ";";
+
+
+  // Parsing de la chaîne CSV
+  token = strtok(csvCopy, delimiter);
+  Serial.print("Frequence: ");
+  Serial.println(token);
+  freq = atof(token);
+
+
+  token = strtok(NULL, delimiter);
+  Serial.print("SpreadingFactor: ");
+  Serial.println(token);
+  sf = atoi(token);
+
+
+  token = strtok(NULL, delimiter);
+  Serial.print("SB: ");
+  Serial.println(token);
+  sb = atof(token);
+
+
+  free(csvCopy);  // Libération de la mémoire allouée par strdup
+}
+
+
+
+
+void setup() {
+  Serial.begin(9600);
+
+
+  // Connecting to a WiFi network
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.println("Connecting to WiFi..");
+  }
+  Serial.println("Connected to the Wi-Fi network");
+  //connecting to a mqtt broker
+  client.setServer(mqtt_broker, mqtt_port);
+  client.setCallback(callback);
+  while (!client.connected()) {
+    String client_id = "esp32-client-";
+    client_id += String(WiFi.macAddress());
+    Serial.printf("The client %s connects to the public MQTT broker\n", client_id.c_str());
+    if (client.connect(client_id.c_str(), mqtt_username, mqtt_password)) {
+      Serial.println("Public EMQX MQTT broker connected");
+    } else {
+      Serial.print("failed with state ");
+      Serial.print(client.state());
+      delay(2000);
+    }
+  }
+  // Publish and subscribe
+  //client.publish(topic, "Hi, Mr Alban ^^");
+  client.subscribe(topic);
+  Serial.begin(9600);
+  pinMode(DI0, INPUT);  // signal interrupt
+  SPI.begin(SCK, MISO, MOSI, SS);
+  LoRa.setPins(SS, RST, DI0);
+  if (!LoRa.begin(freq)) {
+    Serial.println("Starting LoRa failed!");
+    while (1)
+      ;
+  }
+  LoRa.setSpreadingFactor(freq);
+  LoRa.setSpreadingFactor(sf);
+  LoRa.setSignalBandwidth(sb);
+}
+
+
+float d1 = 99.0, d2 = 999.54;
+int rssi;
+
+
+
+
+void callback(char* topic, byte* payload, unsigned int length) {
+  Serial.print("Message arrived in topic: ");
+  Serial.println(topic);
+  Serial.print("Message:");
+
+
+
+
+  // Création d'un tampon pour stocker le payload MQTT
+  char buffer[length + 1];
+  for (int i = 0; i < length; i++) {
+    buffer[i] = payload[i];
+  }
+  buffer[length] = '\0';  // Ajout d'un caractère de fin de chaîne
+
+
+  parseCSV(buffer);
+
+
+  // ***********************************************************fonction pour decoder un json ***************************
+
+
+
+
+  //     // Utilisation d'ArduinoJson pour décoder le JSON
+  //     StaticJsonDocument<800> jsonDocument; // Choisir la taille en fonction de la taille attendue du JSON
+  //     DeserializationError error = deserializeJson(jsonDocument, buffer);
+  //     if (error) {
+  //         Serial.print("deserializeJson() failed: ");
+  //         Serial.println(error.f_str());
+  //         return;
+  //     }
+
+
+
+
+  //     // Affichage des données JSON
+  //     serializeJsonPretty(jsonDocument, Serial);
+
+
+  ////*************************************************************************************************
+
+
+
+
+  Serial.println();
+  Serial.println("-----------------------");
+}
+
+
+
+
+void loop() {
+  client.loop();
+
+
+  rssi = LoRa.packetRssi();
+  d2 = rssi;
+  Serial.println("New Packet");
+  Serial.println("-----------------------");
+  LoRa.beginPacket();
+  // start packet
+  sdp.data[0] = d1;
+  sdp.data[1] = d2;
+  LoRa.write(sdp.frame, 16);
+  LoRa.endPacket();
+  //d1++; d2+=2;
+  Serial.println("-----------------------");
+  Serial.println("packet envoyé");
+  Serial.print("D1 : ");
+  Serial.println(sdp.data[0]);
+  Serial.print("D2 : ");
+  Serial.println(sdp.data[1]);
+  Serial.println(rssi);
+
+
+  Serial.println("-----------------------");
+
+
+  delay(2000);
+  Serial.println("-----------------------");
+  Serial.println("Donnée reçu par MQTT");
+  Serial.println(freq);
+  Serial.println(sf);
+  Serial.println(sb);
+  Serial.println("-----------------------");
+  delay(2000);
+}
+
+
