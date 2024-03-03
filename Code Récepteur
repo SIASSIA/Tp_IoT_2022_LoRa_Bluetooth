@@ -1,0 +1,131 @@
+#include "WiFi.h"
+#include "PubSubClient.h"
+#include "LoRa.h"
+#include <ArduinoJson.h>
+#define freq 8685E5
+#define sf 10
+#define sb 125E3
+#define SCK 5                                  // GPIO5 -- SX127x's SCK
+#define MISO 19                                // GPIO19 -- SX127x's MISO
+#define MOSI 27                                // GPIO27 -- SX127x's MOSI
+#define SS 18                                  // GPIO18 -- SX127x's CS
+#define RST 14                                 // GPIO14 -- SX127x's RESET
+#define DI0 26                                 // GPIO26 -- SX127x's IRQ(Interrupt Request)
+const char *ssid = "iPhone de Rabbi Evralie";  // Entrez votre SSID WiFi
+const char *password = "12345678";             // Entrez votre mot de passe WiFi
+union pack {
+  uint8_t frame[16];  // trames avec octets
+  float data[4];      // 4 valeurs en virgule flottante
+} sdp;                // paquet d’émission
+// MQTT Broker
+const char *mqtt_broker = "test.mosquitto.org";
+const char *topic = "srt5/lea";
+const char *mqtt_username = "";
+const char *mqtt_password = "";
+const int mqtt_port = 1883;
+WiFiClient espClient;
+PubSubClient client(espClient);
+
+
+
+
+void setup() {
+  //Mise de la vitesse de transmission à 9600;
+  Serial.begin(9600);
+  //LoRa
+  pinMode(DI0, INPUT);  // signal interrupt
+  SPI.begin(SCK, MISO, MOSI, SS);
+  LoRa.setPins(SS, RST, DI0);
+  if (!LoRa.begin(freq)) {
+    Serial.println("Starting LoRa failed!");
+  } else {
+    Serial.println("Starting LoRa !");
+  }
+
+
+  LoRa.setFrequency(freq);
+  LoRa.setSpreadingFactor(sf);
+  LoRa.setSignalBandwidth(sb);
+
+
+  // Connecting to a Wi-Fi network
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.println("Connecting to WiFi..");
+  }
+  Serial.println("Connected to the Wi-Fi network");
+
+
+  //connexion au broker MQTT
+  client.setServer(mqtt_broker, mqtt_port);
+//  client.setCallback(callback);
+  while (!client.connected()) {
+    String client_id = "esp32-client-lea";
+    client_id += String(WiFi.macAddress());
+    Serial.printf("The client %s connects to the public MQTT brokern", client_id.c_str());
+    if (client.connect(client_id.c_str(), mqtt_username, mqtt_password)) {
+      Serial.println("Public EMQX MQTT broker connected");
+    } else {
+      Serial.print("failed with state ");
+      Serial.print(client.state());
+      delay(2000);
+    }
+  }
+}
+int value = 0;
+void Envoi_MQTT(){
+
+
+  if (client.publish("srt5/lea", "8655E5;10;125") == true) {
+    Serial.println("Success sending message");
+  } else {
+    Serial.println("Error sending message");
+  }
+}
+
+
+float d1, d2;
+int i = 0, rssi;
+
+
+void Lora() {
+  int packetLen;
+  packetLen = LoRa.parsePacket();
+  if (packetLen > 0) {
+    i = 0;
+    while (LoRa.available()) {
+      sdp.frame[i] = LoRa.read();
+      i++;
+    }
+    d1 = sdp.data[0];
+    d2 = sdp.data[1];
+    rssi = LoRa.packetRssi();  // force du signal en réception en dB
+    Serial.print("Valeur de D1 recu est: ");
+    Serial.println(d1);
+    Serial.print("Valeur de D2 recu est: ");
+    Serial.println(d2);
+    Serial.print("La puissance en reception est: ");
+    Serial.println(rssi);
+  }
+}
+
+
+int temps=0;
+void loop() {
+
+
+ 
+  Lora();
+
+
+  temps=millis();
+  if (temps-value>5000){
+    Envoi_MQTT();
+    value=temps;
+  }
+ 
+  client.loop();
+  delay(2000);
+ 
+}
