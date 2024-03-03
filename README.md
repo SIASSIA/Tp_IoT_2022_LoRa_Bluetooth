@@ -10,6 +10,7 @@ Le dispositif commence par se connecter au réseau Wi-Fi spécifié et s'abonne 
 
 
 ###Partie récepteur###
+
 Dans ce scénario, notre dispositif agit en tant que récepteur. L'objectif principal est d'établir une liaison LoRa avec un émetteur distant. Voici un guide détaillé sur la configuration, les dépendances et le fonctionnement du code.
 
 ##Fonctionnement####
